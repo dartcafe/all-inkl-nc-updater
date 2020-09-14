@@ -33,7 +33,7 @@
 
 # set your installation directory under your root account
 # i.e. if your install directory (nextcloud root) is /www/htdocs/w000000/domain.com/nextcloud
-# then set install_dir to 'domain.com/nextcloud'
+# then set install_dirs to "domain.com/nextcloud"
 
 # this script is created for a
 php_memory_limit="512M"
@@ -56,10 +56,10 @@ for install_dir in $install_dirs; do
 	echo -e "\e[33m - nextcloud base dir: \e[32m$nc_base\e[0m"
 
 	# set memory_limit to $php_memory_limit, if no memory_limit is set
-	if grep -q 'memory_limit' $nc_base/.user.ini; then
+	if grep -q "memory_limit" $nc_base/.user.ini; then
 		echo -e "\e[33m - leave $nc_base/.user.ini untouched, memory_limit is already set\e[0m"
 	else
-		echo 'memory_limit=$php_memory_limit' >> $nc_base/.user.ini
+		echo "memory_limit=$php_memory_limit" >> $nc_base/.user.ini
 		echo -e "\e[32m - $nc_base/.user.ini memory_limit=$php_memory_limit added\e[0m"
 	fi
 
@@ -71,9 +71,9 @@ for install_dir in $install_dirs; do
 	php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-columns
 
 	# assuming that occ update:check still reports the same strings
-	# 'Everything up to date' means, there are no updates, end script in this case
-	# 'update for' means there is an update for at least one app
-	# 'Get more information on how to update' means, there is a Nextcloud update available
+	# "Everything up to date" means, there are no updates, end script in this case
+	# "update for" means there is an update for at least one app
+	# "Get more information on how to update" means, there is a Nextcloud update available
 	if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep -q "Everything up to date"; then
 	    echo -e "\e[32m - No Updates available\e[0m"
 	else
@@ -94,10 +94,10 @@ for install_dir in $install_dirs; do
 			php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-columns
 
 			# check memory_limit again after Nextcloud update
-			if grep -q 'memory_limit' $nc_base/.user.ini; then
+			if grep -q "memory_limit" $nc_base/.user.ini; then
 				echo -e "\e[33m - leave $nc_base/.user.ini untouched, memory_limit is already set\e[0m"
 			else
-				echo 'memory_limit=$php_memory_limit' >> $nc_base/.user.ini
+				echo "memory_limit=$php_memory_limit" >> $nc_base/.user.ini
 				echo -e "\e[32m - $nc_base/.user.ini memory_limit=$php_memory_limit added\e[0m"
 			fi
 
