@@ -30,27 +30,26 @@
 # Make sure, that this script runs on your installation. It works for me.
 # Use it on your own risk
 
-
-# set your installation directory under your root account
-# i.e. if your install directory (nextcloud root) is /www/htdocs/w000000/domain.com/nextcloud
-# then set install_dirs to "domain.com/nextcloud"
-
-# this script is created for a
+# define the php_limit
 php_memory_limit="512M"
 
-install_dirs="
-	foo.com/nextcloud
-	bar.com/nextcloud/server
-"
+# define file with list of installation directories
+# see installations.txt.default
+# set your installation directory under your root account
+# i.e. if your install directory (nextcloud root) is /www/htdocs/w000000/domain.com/nextcloud
+# then add "domain.com/nextcloud" to the installations.txt
+installations="../installations.txt"
 
-for install_dir in $install_dirs; do
-	# get account directory from username
+# get account directory from username (/www/htdocs/w000000 in the example above)
+account_base="/www/htdocs/${USER//ssh-}"
+
+while read install_dir; do
 	# This is especially for all-inkl.com, other providers may need another strategy
-	account_base=/www/htdocs/"${USER//ssh-}"
 	nc_base=$account_base/$install_dir
+
 	echo -e " "
 	echo -e "\e[33m ==================================\e[0m"
-	echo -e "\e[33m = \e[31m $install_dir \e[0m"
+	echo -e "\e[33m =\e[31m $install_dir \e[0m"
 	echo -e "\e[33m ==================================\e[0m"
 	echo -e "\e[33m - account base: \e[32m$account_base\e[0m"
 	echo -e "\e[33m - nextcloud base dir: \e[32m$nc_base\e[0m"
@@ -79,18 +78,20 @@ for install_dir in $install_dirs; do
 	else
 
 		if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep "update for"; then
-			echo -e "\e[32m - App updates are available\e[0m"
-			echo -e "\e[33m - Start updating apps\e[0m"
+			echo -e "\e[32m - app updates are available\e[0m"
+			echo -e "\e[33m - start updating apps\e[0m"
 			php -d memory_limit=$php_memory_limit $nc_base/occ app:update --all -n
 		fi
 
 		if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep "Get more information on how to update"; then
-			echo -e "\e[32m - New Nextcloud version is available\e[0m"
-			echo -e "\e[33m - Start update Nextcloud version\e[0m"
+			echo -e "\e[32m - new Nextcloud version is available\e[0m"
+			echo -e "\e[33m - start update Nextcloud version\e[0m"
 			php -d memory_limit=$php_memory_limit $nc_base/updater/updater.phar -n
-			echo -e "\e[33m - Run occ db:add-missing-indices\e[0m"
+
+			echo -e "\e[33m - run occ db:add-missing-indices\e[0m"
 			php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-indices
-			echo -e "\e[33m - Run occ db:add-missing-columns\e[0m"
+
+			echo -e "\e[33m - run occ db:add-missing-columns\e[0m"
 			php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-columns
 
 			# check memory_limit again after Nextcloud update
@@ -103,4 +104,4 @@ for install_dir in $install_dirs; do
 
 		fi
 	fi
-done
+done <$installations
