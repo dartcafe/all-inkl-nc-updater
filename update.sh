@@ -41,10 +41,10 @@ php_memory_limit="512M"
 installations="../installations.txt"
 
 # get account directory from username (/www/htdocs/w000000 in the example above)
+# This is especially for all-inkl.com, other providers may need another strategy
 account_base="/www/htdocs/${USER//ssh-}"
 
 while read install_dir; do
-	# This is especially for all-inkl.com, other providers may need another strategy
 	nc_base=$account_base/$install_dir
 
 	echo -e " "
