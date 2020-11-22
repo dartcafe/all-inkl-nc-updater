@@ -68,6 +68,10 @@ while read install_dir; do
 	php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-indices
 	echo -e "\e[33m - run occ db:add-missing-columns\e[0m"
 	php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-columns
+	echo -e "\e[33m - run occ db:add-missing-primary-keys\e[0m"
+	php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-primary-keys
+	echo -e "\e[33m - run occ db:convert-filecache-bigint\e[0m"
+	php -d memory_limit=$php_memory_limit $nc_base/occ db:convert-filecache-bigint
 
 	# assuming that occ update:check still reports the same strings
 	# "Everything up to date" means, there are no updates, end script in this case
