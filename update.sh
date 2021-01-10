@@ -53,6 +53,10 @@ while read install_dir; do
 	echo -e "\e[33m ==================================\e[0m"
 	echo -e "\e[33m - account base: \e[32m$account_base\e[0m"
 	echo -e "\e[33m - nextcloud base dir: \e[32m$nc_base\e[0m"
+	echo -e "\e[33m ==================================\e[0m"
+
+	echo -e "\e[33m - chmod 744 $nc_base/occ\e[0m"
+	chmod 744 $nc_base/occ
 
 	# set memory_limit to $php_memory_limit, if no memory_limit is set
 	if grep -q "memory_limit" $nc_base/.user.ini; then
@@ -77,6 +81,8 @@ while read install_dir; do
 	# "Everything up to date" means, there are no updates, end script in this case
 	# "update for" means there is an update for at least one app
 	# "Get more information on how to update" means, there is a Nextcloud update available
+	echo -e "\e[33m - run occ update:check\e[0m"
+	php -d memory_limit=$php_memory_limit $nc_base/occ update:check
 	if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep -q "Everything up to date"; then
 	    echo -e "\e[32m - No Updates available\e[0m"
 	else
