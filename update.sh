@@ -87,11 +87,8 @@ while read install_dir; do
 	    echo -e "\e[32m - No Updates available\e[0m"
 	else
 
-		if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep "update for"; then
-			echo -e "\e[32m - app updates are available\e[0m"
 			echo -e "\e[33m - start updating apps\e[0m"
 			php -d memory_limit=$php_memory_limit $nc_base/occ app:update --all -n
-		fi
 
 		if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep "Get more information on how to update"; then
 			echo -e "\e[32m - new Nextcloud version is available\e[0m"
