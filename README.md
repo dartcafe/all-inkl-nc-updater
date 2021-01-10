@@ -22,6 +22,7 @@ To update call the update.sh file
 * open installations.txt in your editor and enter your installations relative to your accounts root
   * i.e. if your install directory (nextcloud root) is /www/htdocs/w000000/domain.com/nextcloud
   * then add "domain.com/nextcloud" to the installations.txt
+  * for multiple installations add more lines with the correct path to the installation
 * call `chmod 744 ./all-inkl-nc-updater/update.sh`
 
 ## get updates (via git)
