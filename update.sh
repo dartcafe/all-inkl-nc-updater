@@ -105,7 +105,6 @@ function update_nc_version()
 	php -d memory_limit=$php_memory_limit $nc_base/updater/updater.phar -n
 }
 
-
 # init check variables
 update_available=0
 
