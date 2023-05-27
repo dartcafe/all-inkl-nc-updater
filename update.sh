@@ -105,6 +105,14 @@ function update_nc_version()
 	php -d memory_limit=$php_memory_limit $nc_base/updater/updater.phar -n
 }
 
+function allow_eval_patch()
+{
+	patch_file=$nc_base/lib/public/AppFramework/Http/ContentSecurityPolicy.php
+	logger "- patching $patch_file"
+	logger "- replace \e[1m\e[95mprotected \e[91m\$evalScriptAllowed \e[95m= \e[32mfalse \e[0mwith \e[1m\e[95mprotected \e[91m\$evalScriptAllowed \e[95m= \e[32mtrue"
+	sed -i 's/protected $evalScriptAllowed = false/protected $evalScriptAllowed = true/g' $patch_file
+}
+
 # init check variables
 update_available=0
 
@@ -119,6 +127,10 @@ account_base="/www/htdocs/${USER//ssh-}"
 # i.e. if your install directory (nextcloud root) is /www/htdocs/w000000/domain.com/nextcloud
 # then add "domain.com/nextcloud" to the installations.txt
 installations="$script_dir/installations.txt"
+
+# same as installations, but for patching for allowing JS eval
+# use this for dev systems, where you have to allow eval (i.e. for dev tools)
+alloweval="$script_dir/alloweval.txt"
 
 # define the php_memory_limit
 php_memory_limit="512M"
@@ -158,3 +170,17 @@ while read install_dir; do
 		fi
 	fi
 done <$installations
+
+while read install_dir; do
+	nc_base=$account_base/$install_dir
+
+	logger " "
+	logger "=================================="
+	logger "- nextcloud installation: \e[96m$install_dir"
+	logger "=================================="
+	logger "- account base: \e[32m$account_base"
+	logger "- nextcloud base dir: \e[32m$nc_base"
+	logger "=================================="
+
+	allow_eval_patch
+done <$alloweval
