@@ -31,6 +31,7 @@ To update call the update.sh file
   * for multiple installations add more lines with the correct path to the installation (see `installations.txt.sample`)
 * open alloweval.txt and add your installations, where eval() should be allowed
   * the schema is identical to installations.txt
+
 ## get updates (via git)
 * log in to your server via ssh
 * cd into the directory created above (`cd helpers` in this example)
