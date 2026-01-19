@@ -30,13 +30,6 @@
 # Make sure, that this script runs on your installation. It works for me.
 # Use it at your own risk
 
-function test_installations() {
-    if [[ ! -f ${installations} ]]; then
-        logger "- installations.txt missing"
-        exit 1
-    fi
-}
-
 function logger()
 {
     local text="$1"
@@ -81,15 +74,15 @@ function occ_update_check() {
 	logger "- run occ update:check"
 	if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep -q "Everything up to date"; then
 	    logger "- No Updates available"
-		update_available=0
+		UPDATE_AVAILABLE=0
 	else
 		logger "- Updates available"
-		update_available=1
+		UPDATE_AVAILABLE=1
 	fi
 
 	if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep "Get more information on how to update"; then
 		logger "- New Nextcloud version is available"
-		update_available=2
+		UPDATE_AVAILABLE=2
 	fi
 }
 
@@ -114,40 +107,39 @@ function allow_eval_patch()
 }
 
 # init check variables
-update_available=0
+UPDATE_AVAILABLE=0
 
-script_dir=$(dirname "$0")
+SCRIPT_DIR=$(dirname "$0")
 # get account directory from username (/www/htdocs/w000000 in the example above)
 # This is especially for all-inkl.com, other providers may need another strategy
-account_base="/www/htdocs/${USER//ssh-}"
+ACCOUNT_BASE="/www/htdocs/${USER//ssh-}"
 
 # define file with list of installation directories
 # see installations.txt.default
 # set your installation directory under your root account
 # i.e. if your install directory (nextcloud root) is /www/htdocs/w000000/domain.com/nextcloud
 # then add "domain.com/nextcloud" to the installations.txt
-installations="$script_dir/installations.txt"
+INSTALLATIONS="$SCRIPT_DIR/installations.txt"
 
-# same as installations, but for patching for allowing JS eval
-# use this for dev systems, where you have to allow eval (i.e. for dev tools)
-#
-# !!!!!!!!!!!!
-# !! allow_eval_patch should not be needed anymore for
-# !! recent Firefox versions. Only use this, if you really need it
-# !!!!!!!!!!!!
-alloweval="$script_dir/alloweval.txt"
+# check, if installations.txt exists
+if [[ ! -f ${INSTALLATIONS} ]]; then
+	logger "- installations.txt missing"
+	exit 1
+fi
 
 # define the php_memory_limit
 php_memory_limit="512M"
 
+test_installations
+
 while read install_dir; do
-	nc_base=$account_base/$install_dir
+	nc_base=$ACCOUNT_BASE/$install_dir
 
 	logger " "
 	logger "=================================="
 	logger "- nextcloud installation: \e[96m$install_dir"
 	logger "=================================="
-	logger "- account base: \e[32m$account_base"
+	logger "- account base: \e[32m$ACCOUNT_BASE"
 	logger "- nextcloud base dir: \e[32m$nc_base"
 	logger "=================================="
 
@@ -164,28 +156,42 @@ while read install_dir; do
 	# "Everything up to date" means, there are no updates, end script in this case
 	# "update for" means there is an update for at least one app
 	# "Get more information on how to update" means, there is a Nextcloud update available
-	if [ "${update_available}" != "0" ] ; then
+	if [ "${UPDATE_AVAILABLE}" != "0" ] ; then
 		logger "- start updating apps"
 		occ_app_update
 
-		if [ "${update_available}" = "2" ] ; then
+		if [ "${UPDATE_AVAILABLE}" = "2" ] ; then
 			update_nc_version
 			occ_add_indices
 			set_php_limit
 		fi
 	fi
-done <$installations
+done <$INSTALLATIONS
+
+# same as INSTALLATIONS, but for patching for allowing JS eval
+# use this for dev systems, where you have to allow eval (i.e. for dev tools)
+#
+# !!!!!!!!!!!!
+# !! allow_eval_patch should not be needed anymore. Only use this, if you really need it
+# !!!!!!!!!!!!
+ALLOWEVAL="$SCRIPT_DIR/alloweval.txt"
+
+# if alloweval.txt does not exist, exit here
+if [[ ! -f ${ALLOWEVAL} ]]; then
+	exit 0
+fi
 
 while read install_dir; do
-	nc_base=$account_base/$install_dir
+	nc_base=$ACCOUNT_BASE/$install_dir
 
 	logger " "
 	logger "=================================="
 	logger "- nextcloud installation: \e[96m$install_dir"
 	logger "=================================="
-	logger "- account base: \e[32m$account_base"
+	logger "- account base: \e[32m$ACCOUNT_BASE"
 	logger "- nextcloud base dir: \e[32m$nc_base"
 	logger "=================================="
 
 	allow_eval_patch
-done <$alloweval
+done <$ALLOWEVAL
+
