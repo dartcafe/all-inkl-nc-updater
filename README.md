@@ -51,8 +51,8 @@ To update call the update.sh file
 - execute the following commands:
   ```shell
   chmod 644 update.sh
-  git pull
   git fetch
+  git pull
   chmod 744 update.sh
   ```
 - You may want to remove alloweval.txt
