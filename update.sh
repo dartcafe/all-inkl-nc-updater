@@ -130,6 +130,11 @@ installations="$script_dir/installations.txt"
 
 # same as installations, but for patching for allowing JS eval
 # use this for dev systems, where you have to allow eval (i.e. for dev tools)
+#
+# !!!!!!!!!!!!
+# !! allow_eval_patch should not be needed anymore for
+# !! recent Firefox versions. Only use this, if you really need it
+# !!!!!!!!!!!!
 alloweval="$script_dir/alloweval.txt"
 
 # define the php_memory_limit
