@@ -98,14 +98,6 @@ function update_nc_version()
 	php -d memory_limit=$php_memory_limit $nc_base/updater/updater.phar -n
 }
 
-function allow_eval_patch()
-{
-	patch_file=$nc_base/lib/public/AppFramework/Http/ContentSecurityPolicy.php
-	logger "- patching $patch_file"
-	logger "- replace \e[1m\e[95mprotected \e[91m\$evalScriptAllowed \e[95m= \e[32mfalse \e[0mwith \e[1m\e[95mprotected \e[91m\$evalScriptAllowed \e[95m= \e[32mtrue"
-	sed -i 's/protected $evalScriptAllowed = false/protected $evalScriptAllowed = true/g' $patch_file
-}
-
 # init check variables
 UPDATE_AVAILABLE=0
 
@@ -167,31 +159,3 @@ while read install_dir; do
 		fi
 	fi
 done <$INSTALLATIONS
-
-# same as INSTALLATIONS, but for patching for allowing JS eval
-# use this for dev systems, where you have to allow eval (i.e. for dev tools)
-#
-# !!!!!!!!!!!!
-# !! allow_eval_patch should not be needed anymore. Only use this, if you really need it
-# !!!!!!!!!!!!
-ALLOWEVAL="$SCRIPT_DIR/alloweval.txt"
-
-# if alloweval.txt does not exist, exit here
-if [[ ! -f ${ALLOWEVAL} ]]; then
-	exit 0
-fi
-
-while read install_dir; do
-	nc_base=$ACCOUNT_BASE/$install_dir
-
-	logger " "
-	logger "=================================="
-	logger "- nextcloud installation: \e[96m$install_dir"
-	logger "=================================="
-	logger "- account base: \e[32m$ACCOUNT_BASE"
-	logger "- nextcloud base dir: \e[32m$nc_base"
-	logger "=================================="
-
-	allow_eval_patch
-done <$ALLOWEVAL
-
