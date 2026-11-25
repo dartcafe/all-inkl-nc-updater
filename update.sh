@@ -18,144 +18,105 @@
 # -
 # - You should have received a copy of the GNU Affero General Public License
 # - along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-# Autoupdater 0.2 for nextcloud installation of all-inkl.com customers
-# This script
-# - sets the memory_limit in .user.ini
-# - makes sure, missing indices and columns are added
-# - updates apps, if available
-# - updates the nextcloud instance
-# - supports multiple instances in one account
 #
-# Make sure, that this script runs on your installation. It works for me.
-# Use it at your own risk
+# Autoupdater for Nextcloud installations on all-inkl.com.
 
-function logger()
-{
-    local text="$1"
-    if [[ "${text}" != "" ]] ; then
-			echo -e "\e[33m${text}\e[0m"
-    fi
+set -Eeuo pipefail
+
+on_error() {
+	local status=$?
+	printf 'ERROR: command failed (line %s, exit %s): %s\n' "$1" "$status" "$BASH_COMMAND" >&2
+	exit "$status"
+}
+trap 'on_error "$LINENO"' ERR
+
+logger() {
+	local text="$1"
+	[[ -n "$text" ]] && printf '\033[33m%s\033[0m\n' "$text"
 }
 
-function occ_add_indices()
-{
-	# occ db:add-missing-indices and :add-missing-columns is called blind
-	logger "- run occ db:add-missing-indices"
-	php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-indices
-	logger "- run occ db:add-missing-columns"
-	php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-columns
-	logger "- run occ db:add-missing-primary-keys"
-	php -d memory_limit=$php_memory_limit $nc_base/occ db:add-missing-primary-keys
-	logger "- run occ -n db:convert-filecache-bigint"
-	php -d memory_limit=$php_memory_limit $nc_base/occ -n db:convert-filecache-bigint
-}
-
-function set_php_limit()
-{
-	# set memory_limit to $php_memory_limit, if no memory_limit is set
-	if grep -q "memory_limit" $nc_base/.user.ini; then
-		logger "- leave $nc_base/.user.ini untouched, memory_limit is already set"
-	else
-		echo "memory_limit=$php_memory_limit" >> $nc_base/.user.ini
-		logger "- $nc_base/.user.ini memory_limit=$php_memory_limit added"
-	fi
-}
-
-function occ_upgrade()
-{
-	# run occ upgrade to make sure, all apps are up to date
-	logger "- make sure everything is up to date before update"
-	logger "- run occ upgrade first"
-	php -d memory_limit=$php_memory_limit $nc_base/occ upgrade
-}
-
-function occ_update_check() {
-	logger "- run occ update:check"
-	if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep -q "Everything up to date"; then
-	    logger "- No Updates available"
-		UPDATE_AVAILABLE=0
-	else
-		logger "- Updates available"
-		UPDATE_AVAILABLE=1
-	fi
-
-	if php -d memory_limit=$php_memory_limit $nc_base/occ update:check | grep "Get more information on how to update"; then
-		logger "- New Nextcloud version is available"
-		UPDATE_AVAILABLE=2
-	fi
-}
-
-function occ_app_update()
-{
-	logger "- start updating apps"
-	php -d memory_limit=$php_memory_limit $nc_base/occ app:update --all -n
-}
-
-function update_nc_version()
-{
-	logger "- start update Nextcloud version"
-	php -d memory_limit=$php_memory_limit $nc_base/updater/updater.phar -n
-}
-
-# init check variables
-UPDATE_AVAILABLE=0
-
-SCRIPT_DIR=$(dirname "$0")
-# get account directory from username (/www/htdocs/w000000 in the example above)
-# This is especially for all-inkl.com, other providers may need another strategy
-ACCOUNT_BASE="/www/htdocs/${USER//ssh-}"
-
-# define file with list of installation directories
-# see installations.txt.default
-# set your installation directory under your root account
-# i.e. if your install directory (nextcloud root) is /www/htdocs/w000000/domain.com/nextcloud
-# then add "domain.com/nextcloud" to the installations.txt
-INSTALLATIONS="$SCRIPT_DIR/installations.txt"
-
-# check, if installations.txt exists
-if [[ ! -f ${INSTALLATIONS} ]]; then
-	logger "- installations.txt missing"
+fail() {
+	logger "ERROR: $1" >&2
 	exit 1
-fi
+}
 
-# define the php_memory_limit
-php_memory_limit="512M"
+occ() {
+	php -d "memory_limit=$PHP_MEMORY_LIMIT" "$NC_BASE/occ" "$@"
+}
 
-test_installations
+occ_add_indices() {
+	logger "- add missing database indices, columns and primary keys"
+	occ db:add-missing-indices
+	occ db:add-missing-columns
+	occ db:add-missing-primary-keys
+	occ -n db:convert-filecache-bigint
+}
 
-while read install_dir; do
-	nc_base=$ACCOUNT_BASE/$install_dir
+set_php_limit() {
+	local user_ini="$NC_BASE/.user.ini"
+	if [[ -f "$user_ini" ]] && grep -Eq '^[[:space:]]*memory_limit[[:space:]]*=' "$user_ini"; then
+		logger "- leave $user_ini untouched; memory_limit is already set"
+	else
+		printf 'memory_limit=%s\n' "$PHP_MEMORY_LIMIT" >> "$user_ini"
+		logger "- set memory_limit=$PHP_MEMORY_LIMIT in $user_ini"
+	fi
+}
+
+update_nc_version() {
+	local updater="$NC_BASE/updater/updater.phar"
+	[[ -f "$updater" ]] || fail "Nextcloud updater not found: $updater"
+	logger "- run the Nextcloud updater"
+	php -d "memory_limit=$PHP_MEMORY_LIMIT" "$updater" --no-interaction
+}
+
+update_apps() {
+	logger "- update available apps"
+	occ app:update --all --no-interaction
+}
+
+process_installation() {
+	local install_dir="$1"
+	NC_BASE="$ACCOUNT_BASE/$install_dir"
+
+	case "$install_dir" in
+		/*|..|../*|*/../*|*/..)
+			fail "installation path must stay under the account root: $install_dir"
+			;;
+	esac
+
+	[[ -f "$NC_BASE/occ" ]] || fail "occ not found; check installation path: $NC_BASE"
+	[[ -f "$NC_BASE/config/config.php" ]] || fail "Nextcloud config not found: $NC_BASE/config/config.php"
 
 	logger " "
 	logger "=================================="
-	logger "- nextcloud installation: \e[96m$install_dir"
+	logger "- Nextcloud installation: $install_dir"
+	logger "- Account base: $ACCOUNT_BASE"
+	logger "- Nextcloud base: $NC_BASE"
 	logger "=================================="
-	logger "- account base: \e[32m$ACCOUNT_BASE"
-	logger "- nextcloud base dir: \e[32m$nc_base"
-	logger "=================================="
-
-	logger "- chmod 744 $nc_base/occ"
-	chmod 744 $nc_base/occ
 
 	set_php_limit
-	occ_upgrade
+	# The updater replaces the code and runs `occ upgrade` after replacement.
+	update_nc_version
 	occ_add_indices
-	occ_app_update
-	occ_update_check
+	update_apps
+}
 
-	# assuming that occ update:check still reports the same strings
-	# "Everything up to date" means, there are no updates, end script in this case
-	# "update for" means there is an update for at least one app
-	# "Get more information on how to update" means, there is a Nextcloud update available
-	if [ "${UPDATE_AVAILABLE}" != "0" ] ; then
-		logger "- start updating apps"
-		occ_app_update
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+[[ -n "${USER:-}" ]] || fail 'USER is not set; cannot determine the All-Inkl account directory'
+ACCOUNT_BASE="/www/htdocs/${USER#ssh-}"
+INSTALLATIONS="$SCRIPT_DIR/installations.txt"
+PHP_MEMORY_LIMIT="512M"
+INSTALLATION_COUNT=0
 
-		if [ "${UPDATE_AVAILABLE}" = "2" ] ; then
-			update_nc_version
-			occ_add_indices
-			set_php_limit
-		fi
-	fi
-done <$INSTALLATIONS
+[[ -f "$INSTALLATIONS" ]] || fail "installations.txt missing: $INSTALLATIONS"
+[[ -d "$ACCOUNT_BASE" ]] || fail "All-Inkl account directory not found: $ACCOUNT_BASE"
+
+while IFS= read -r install_dir || [[ -n "$install_dir" ]]; do
+	install_dir=${install_dir%$'\r'}
+	# Ignore blank lines and comments in the installation list.
+	[[ -z "$install_dir" || "$install_dir" == \#* ]] && continue
+	process_installation "$install_dir"
+	INSTALLATION_COUNT=$((INSTALLATION_COUNT + 1))
+done < "$INSTALLATIONS"
+
+(( INSTALLATION_COUNT > 0 )) || fail "no installations configured in $INSTALLATIONS"

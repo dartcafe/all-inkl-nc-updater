@@ -41,6 +41,8 @@ To update call the update.sh file
   - then add "domain.com/nextcloud" to the `installations.txt`
   - for multiple installations add more lines with the correct path to the installation (see [`installations.txt.sample`](https://github.com/dartcafe/all-inkl-nc-updater/blob/master/installations.txt.sample))
 
+The updater processes each configured installation in order: it runs the built-in Nextcloud updater, repairs missing database indices/columns/primary keys, converts the file cache IDs to bigint, and updates apps. It stops at the first failed command and reports the failing command.
+
 ## Get updates (via git)
 
 - log in to your server via ssh
